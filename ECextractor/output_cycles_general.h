@@ -1,0 +1,1 @@
+void    output_cycles_general(int& number_analyzed_tp, int& tp_start, int& tp_end,int& number_vertices,int** Summary,int**  Auto_reg_summary );

@@ -1,0 +1,1 @@
+void output_stat(int& tp_start, int& tp_end ,double& duration );

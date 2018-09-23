@@ -1,0 +1,1 @@
+void output_adjacency_matrix_screenshot(double** adjacency_matrix,int& strong_component, int& time_point,int& number_vertices, int& SCC_active, double*  X);

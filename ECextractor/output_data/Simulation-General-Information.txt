@@ -1,0 +1,8 @@
+***********************************GENERAL INFORMATION ******************************************
+Date when the simulation was performed : Mon Sep 24 04:24:45 2018
+
+*************************************************************************************************
+Elapsed CPU time for the  completion of the simulation is: 55 seconds = 0.916667 minutes 
+Initial time point for the analysis: 1 Final  time point for the analysis: 5000
+Total  number of time points used for the analysis:   5000
+*************************************************************************************************
