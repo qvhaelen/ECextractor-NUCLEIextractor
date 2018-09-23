@@ -1,0 +1,351 @@
+###################################################################################################
+#
+#
+#             TREATMENT OF OUTPUTS FROM ECextractor - GENERATION OF INPUTS FOR NUCLEIextractor
+#
+#
+###################################################################################################
+
+# this is the main directory. The path should be adapted to  the location of the directory "ECextractor-NUCLEIextractor" on your computer
+############################################################################################################################
+main_directory_name<-paste("C:\\Users\\Quentin\\Documents\\MY-FUTURE-PROJECT\\CODE-ARXIV-RELEASE\\ECextractor-NUCLEIextractor\\",sep="")
+
+input_ECextractor<-paste(main_directory_name,"ECextractor\\input_data",sep="")
+output_ECextractor<-paste(main_directory_name,"ECextractor\\output_data",sep="")
+output_ECextractor_screenshot<-paste(main_directory_name,"ECextractor\\output_data\\screenshot",sep="")
+code_source_NUCLEIextractor<-paste(main_directory_name,"NUCLEIextractor" ,sep="")
+input_NUCLEIextractor<-paste(main_directory_name,"NUCLEIextractor\\input_data",sep="")
+
+setwd(input_ECextractor)
+name_file_data_typhon<-paste("TIME_SERIES_DATA.txt",sep="")
+typhon_data<-read.table(name_file_data_typhon)
+nbre_species<-ncol(typhon_data) -1
+
+
+setwd(output_ECextractor)
+liste_cycle_initiale<-read.csv('RESULTS-LIST-ECS.csv',header = FALSE)
+cycle_evolution_temporelle<-read.csv('ECS-TEMPORAL-EVOLUTION.csv', header = FALSE)
+nbre_cycles<-read.csv('SUMMARY-SCC-CYCLES.csv',header = FALSE)
+evolution_auto_reg<-read.csv('TIME_EVOLUTION_AUTO_REGULATIONS.csv',header = FALSE)
+summary_auto_reg<-read.csv('SUMMARY_AUTO_REGULATIONS.csv', header =  FALSE)
+
+setwd(output_ECextractor_screenshot)
+LIST_ID_SCREENSHOT<-read.table("LIST-SCREENSHOT-ID")
+
+##########################################################################################################################
+# Treatment of the outputs from ECextractor to generate final list of cycles.
+##########################################################################################################################
+
+fichier_doublons<-matrix(nrow =  ncol(cycle_evolution_temporelle)-1 , ncol = ncol(cycle_evolution_temporelle)-1 )
+total_doublons<-0
+fichier_doublons[,]<-0
+cursor1<-2
+col_doublons<-0
+while( cursor1< nrow(liste_cycle_initiale))
+{
+  cursor2<-cursor1
+  while( (cursor2+4)< nrow(liste_cycle_initiale))
+  {
+     cursor2<-cursor2 + 4
+     if (liste_cycle_initiale[cursor2,1] > 0 )
+     {
+       if ( (liste_cycle_initiale[cursor2,1] == liste_cycle_initiale[cursor1,1]) && (liste_cycle_initiale[cursor2+1,1] == liste_cycle_initiale[cursor1+1,1]) )
+       {     length<-liste_cycle_initiale[cursor1,1]
+             same_cycle<-TRUE
+             
+                 for (i in 1:length){
+                   if (liste_cycle_initiale[cursor2,i+1] != liste_cycle_initiale[cursor1,i+1])
+                   { 
+                      same_cycle<-FALSE
+                   }
+                   if (liste_cycle_initiale[cursor2+1,i+1] != liste_cycle_initiale[cursor1+1,i+1])
+                   {
+                      same_cycle<-FALSE
+                   }
+                   if (liste_cycle_initiale[cursor2-1,i+1] != liste_cycle_initiale[cursor1-1,i+1])
+                   {
+                      same_cycle<-FALSE
+                   }
+                 } #  for (i in 1:length)
+             if (same_cycle)
+             {    
+                  total_doublons<-total_doublons+1
+                  col_doublons<-col_doublons+1
+                  liste_cycle_initiale[cursor2,1]<-0
+                  fichier_doublons[liste_cycle_initiale[cursor1-1,1],col_doublons]<-liste_cycle_initiale[cursor2-1,1]
+             }
+
+
+       } # check  length of cycle and sign
+     } # check  if already visited >0
+  } # while cursor2
+
+  # on update le cursor1 jusqu'au  cycle non visite suivant
+  suivant<-TRUE
+  while(suivant )
+  {
+   cursor1<-cursor1+4
+   if(cursor1< nrow(liste_cycle_initiale)) {  if (liste_cycle_initiale[cursor1,1] != 0){suivant<-FALSE}}
+   if (cursor1> nrow(liste_cycle_initiale)){suivant<-FALSE}
+  }
+col_doublons<-0
+
+} # while cursor1
+
+
+for (i in 1:nrow(fichier_doublons))
+{  doublons_col<-1
+   while(fichier_doublons[i,doublons_col] !=0)
+  {
+       cycle_evolution_temporelle[,i+1]<- cycle_evolution_temporelle[,i+1] + cycle_evolution_temporelle[,fichier_doublons[i,doublons_col]+1]
+       doublons_col<-doublons_col+1
+  } # end while(fichier_doublons[i,doublons_col] !=0)
+
+} # for (i in 1:nrow(fichier_doublons))
+
+
+#========================================================
+#  liste_cycle_finale contains the final list of cycles
+#========================================================
+
+liste_cycle_finale<-matrix(nrow = nrow(liste_cycle_initiale)-total_doublons*4, ncol = ncol(liste_cycle_initiale))
+
+
+cursor1<- -2
+nbre_cycle_done<-0 
+
+for(i in 1:nrow(fichier_doublons))
+{
+ cursor1<-cursor1+4
+ if (liste_cycle_initiale[cursor1,1] != 0)
+ {    long_totale<-liste_cycle_initiale[cursor1,1] +1
+      for (j in 1:long_totale)
+      {
+          for (k in 1:4)
+         {
+            liste_cycle_finale[k+4*nbre_cycle_done,j] <-liste_cycle_initiale[k+cursor1-2,j]
+         }
+      }
+  nbre_cycle_done<-nbre_cycle_done+1
+ } # if length !=0
+}
+
+#============================================================================================
+# the labels of the cycles are adapted and file for the temporal evolution is created
+#============================================================================================
+
+nbre_cycles_restant<-nrow(fichier_doublons) - total_doublons
+
+cycle_evolution_temporelle_reduit<-matrix(nrow = nrow(cycle_evolution_temporelle), ncol = nbre_cycles_restant )
+
+cursor1<- -3
+for (i in 1:nbre_cycles_restant)
+{
+  cursor1<-cursor1+4
+
+  cycle_evolution_temporelle_reduit[,i]<-cycle_evolution_temporelle[,liste_cycle_finale[cursor1,1]+1]
+  liste_cycle_finale[cursor1,1]<-i
+  liste_cycle_finale[cursor1+3,1]<-0
+  
+}
+
+
+for (i in 1:nrow(cycle_evolution_temporelle_reduit))
+{
+  for (j in 1:nbre_cycles_restant)
+  {
+    if (cycle_evolution_temporelle_reduit[i,j]>=1){cycle_evolution_temporelle_reduit[i,j]<- 1} 
+    if (cycle_evolution_temporelle_reduit[i,j] == 0){cycle_evolution_temporelle_reduit[i,j]<- 0} 
+  }
+
+}
+
+
+cycle_evolution_temporelle_reduit_output<-matrix(nrow = nrow(cycle_evolution_temporelle)+1, ncol = nbre_cycles_restant+1 )
+
+
+cycle_evolution_temporelle_reduit_output[1,1]<-paste("Timepoints",sep="")
+for (j in 1:nbre_cycles_restant){cycle_evolution_temporelle_reduit_output[1,j+1]<-paste("Cycle No. ",j,sep="")}
+
+for (i in 1:nrow(cycle_evolution_temporelle_reduit))
+{
+  for (j in 1:nbre_cycles_restant)
+  {
+     cycle_evolution_temporelle_reduit_output[i+1,j+1]<- cycle_evolution_temporelle_reduit[i,j]
+  }
+  cycle_evolution_temporelle_reduit_output[i+1,1]<-cycle_evolution_temporelle[i,1]
+}
+
+
+
+# Creation of the two  matrices B et C needed as inputs for the program NUCLEIextractor
+#################################################################################################################
+
+cycle_time_evol_table<-matrix(nrow = ncol(cycle_evolution_temporelle_reduit),ncol = nrow(cycle_evolution_temporelle_reduit) )
+cycle_time_evol_table[,]<-0
+
+for (ct1  in 1:nrow(cycle_evolution_temporelle_reduit))
+{
+  for (ct2 in 1:ncol(cycle_evolution_temporelle_reduit))
+  {
+    cycle_time_evol_table[ct2,ct1]<-cycle_evolution_temporelle_reduit[ct1,ct2]  
+  }
+}
+
+
+
+Matrix_A<-matrix(nrow = nbre_species + 3, ncol = nrow(cycle_time_evol_table) +ncol(evolution_auto_reg))
+Matrix_A[,]<-0
+
+it_2<- -2
+for (it_1 in 1:nrow(cycle_time_evol_table))
+{
+it_2<-it_2+4
+Matrix_A[1,it_1]<-liste_cycle_finale[it_2-1,1]
+Matrix_A[2,it_1]<-liste_cycle_finale[it_2,1]
+Matrix_A[3,it_1]<-liste_cycle_finale[it_2+1,1]
+  for (it_3 in 1:Matrix_A[2,it_1])
+  {
+      Matrix_A[3+liste_cycle_finale[it_2,it_3+1],it_1]<- 1
+  } # for (it_3 in 1:Matrix_A[1,it_1])
+
+
+} # for (it_1 in 1:nrow(cycle_time_evol_table))
+
+begin<-nrow(cycle_time_evol_table)+1
+label_nodes<-0
+for (it_4 in begin:ncol(Matrix_A))
+{
+Matrix_A[1,it_4]<-it_4
+Matrix_A[2,it_4]<-1
+label_nodes<-label_nodes+1
+Matrix_A[label_nodes+3,it_4]<-1
+} # end for (it_4 in begin:ncol(Matrix_A))
+
+Matrix_B<-matrix(nrow = ncol(Matrix_A), ncol = ncol(Matrix_A))
+Matrix_B[,]<-0
+nbre_non_zero<-0
+
+for(it_5 in 1:nrow(Matrix_B))
+{
+    for (it_6 in 1:ncol(Matrix_A))
+    {
+        it_7<-3
+        not_same_species<-TRUE
+        while (not_same_species && it_7<nrow(Matrix_A))
+        {
+          it_7<-it_7+1     
+          if (Matrix_A[it_7,it_5] +Matrix_A[it_7,it_6] == 2){not_same_species<-FALSE} 
+         } # end  while (not_same_species)
+         if (not_same_species)
+         {
+            Matrix_B[it_5,it_6]<-1
+            nbre_non_zero<-nbre_non_zero+1
+         } 
+    } # for (it_6 in 1:ncol(Matrix_A))
+} # for(it_5 in 1:nrow(Matrix_B))
+
+
+
+
+#############################################################################
+# tableau  ave les label des screenshots et les cycles actifs correspondants.
+#############################################################################
+
+tableau_C<-matrix(nrow = nrow(LIST_ID_SCREENSHOT)+1, ncol = ncol(Matrix_A)+1)
+tableau_C[,]<-0
+
+species_present<-matrix(nrow = nrow(LIST_ID_SCREENSHOT), ncol =1)
+species_present[,]<-0
+
+for  (it_1 in 1:nrow(LIST_ID_SCREENSHOT))
+{
+   tableau_C[it_1+1,1]<-LIST_ID_SCREENSHOT[it_1,1]
+   timepoint<-tableau_C[it_1+1,1]####%/%10+1
+     for (kk in 1:nbre_species )
+     {
+          if (typhon_data[LIST_ID_SCREENSHOT[it_1,1],kk]> 10e-12){species_present[it_1,1]<- species_present[it_1,1]+1}
+     } # end   for (kk in 1:nbre_species )
+   for (it_2 in 1:nrow(cycle_time_evol_table))
+   {
+      tableau_C[1,it_2+1]<-Matrix_A[2,it_2]
+      if (cycle_time_evol_table[it_2,timepoint] ==  1){tableau_C[it_1+1,it_2+1]<-1}
+   }  # for (it_2 in 2:nrow(cycle_time_evol_table))
+   for(it_3 in 1:ncol(evolution_auto_reg))
+   {
+      if (evolution_auto_reg[timepoint,it_3] != 0)
+        {
+          tableau_C[it_1+1,it_3+1+nrow(cycle_time_evol_table)]<-1
+          tableau_C[1,it_3+1+nrow(cycle_time_evol_table)]<-1
+        }
+   }  # end  for(it_3 in 1:ncol(evolution_auto_reg))
+} # end for  (it_1 in 1:nrow(LIST_ID_SCREENSHOT))
+
+setwd(input_NUCLEIextractor)
+#### LES FICHIERS .CSV SONT CONVERTI VIA EXCELL EN TXT TAB DELIMITED POUR SERVIR D'INPUT A NUCLEIextractor...  EN FAIT CEUX DU  DESSUS SONT PROBABLEMENT OKAY AUSSI??
+write.csv( Matrix_B, file = "Matrix_B.csv",row.names = FALSE )
+write.csv( tableau_C, file = "tableau_C.csv",row.names = FALSE )
+
+   
+# Generating the source files for code NUCLEIextractor with the adapted parameters 
+##############################################################################################
+
+
+initialisation_set_up<-matrix(nrow = 7+nrow(LIST_ID_SCREENSHOT),  ncol = 1)
+initialisation_set_up[,]<-""
+initialisation_set_up[1,1]<-paste("#include \"Initial_set_up_1.h\"",sep="")
+initialisation_set_up[2,1]<-paste("void Initial_set_up_1(int& nbre_species,int& nbre_EC,int& nbre_auto_reg,int& nbre_screenshot){",sep="")
+
+initialisation_set_up[3,1]<-paste("nbre_species = ",nbre_species,";",sep="")
+initialisation_set_up[4,1]<-paste("nbre_EC =", nrow(cycle_time_evol_table),";",sep="")
+initialisation_set_up[5,1]<-paste("nbre_auto_reg =",ncol(evolution_auto_reg),";",sep="")
+initialisation_set_up[6,1]<-paste("nbre_screenshot =", nrow(LIST_ID_SCREENSHOT),";",sep="")
+k_line<-6
+
+initialisation_set_up[nrow(LIST_ID_SCREENSHOT)+1+6,1]<-paste("return;}",sep="")
+
+
+setwd(code_source_NUCLEIextractor)
+write(initialisation_set_up, file="initial_set_up_1.cc")
+
+
+
+initialisation_set_up<-matrix(nrow = 7+nrow(LIST_ID_SCREENSHOT),  ncol = 1)
+initialisation_set_up[,]<-""
+initialisation_set_up[1,1]<-paste("#include \"Initial_set_up_2.h\"",sep="")
+initialisation_set_up[2,1]<-paste("void Initial_set_up_2( int* nbre_species_screenshot){",sep="")
+
+k_line<-6
+for (i in 1:nrow(LIST_ID_SCREENSHOT))
+{
+  k_line<-k_line+1
+  initialisation_set_up[k_line,1]<-paste("nbre_species_screenshot[",i,"] =", species_present[i,1],";",sep="")
+}
+
+initialisation_set_up[nrow(LIST_ID_SCREENSHOT)+1+6,1]<-paste("return;}",sep="")
+
+
+setwd(code_source_NUCLEIextractor)
+write(initialisation_set_up, file="initial_set_up_2.cc")
+
+##################################################################################################################                  
+#SAVING FILES
+#################################################################################################################
+for (i in 1:nrow(liste_cycle_finale))
+{
+ for (j in 1:ncol(liste_cycle_finale))
+  {
+   if (is.na(liste_cycle_finale[i,j])){liste_cycle_finale[i,j]<-""}
+  }
+}
+
+setwd(output_ECextractor)
+write.csv( liste_cycle_finale, file = "FINAL-RESULTS-LIST-ECS.csv",row.names = FALSE )
+write.csv(cycle_evolution_temporelle_reduit_output, file="FINAL-TEMPORAL-EVOLUTION-ECS.csv",row.names = FALSE )
+
+##################################################################################################################
+#
+#                                        PROGRAM COMPLETED 
+#           BEFORE RUNNING NUCLEIextractor:  NUCLEIextractor INPUTS MUST BE MANUALLY CONVERTED INTO .TXT TAB DELIMITED 
+#
+##################################################################################################################
