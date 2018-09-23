@@ -15,7 +15,7 @@ INSTALLATION AND CONFIGURATION OF THE DIRECTORIES
 -ECextractor  and NUCLEIextractor have been written in C++, the codes do not require any other libraries than the standard ones   and use data structures available within the Standard Template Library (STL), also  part of the distribution by default. Initially the codes were designed and tested on a MAC OS, with  g++ compiler.
 -The R-script was written with R (this version using R 3.3.1). The code performs mathematical operations using
  standard data structures. It does not require any additional  package and can run with previous R releases (R 2.14).
--There is common directory called "ECextractor-NUCLEIextractor" which  contains the R-script and two separate directories called "NUCLEIextractor" and "ECextractor". Both directories "NUCLEIextractor" and "VICTORIII" are structured in the same way. They contain the set of source files, the makefile and two  additional directories "input_data" and "output_data" 
+-There is common directory called "ECextractor-NUCLEIextractor" which  contains the R-script and two separate directories called "NUCLEIextractor" and "ECextractor". Both directories "NUCLEIextractor" and "ECextractor" are structured in the same way. They contain the set of source files, the makefile and two  additional directories "input_data" and "output_data" 
   
 
 
